@@ -190,4 +190,32 @@ print('Результат подбора сохранен в файле: ', name
 #   ???     Вывод информации о сборках в начальном формате (13 знаков)
 #   ???     и информации о зазорах (если необходимо)
 
+                    # Преобразуем значения out_likage в set (множество) для ускорения поиска
+                    # Для начала - Ring.
+search_set = set(out_likage.loc[:, 'Ring_No'].astype(str))
+                    # Проверяем каждую строку исходного датафрейма:
+                    # есть ли хоть одно значение из search_set внутри строки
+mask = ring.iloc[:, 0].astype(str).apply(
+    lambda x: any(term in x for term in search_set)
+)
+result_K1 = ring[mask]
+result_K1 = result_K1.drop(columns=['No'])  # Удаляем лишние столбцы.
 
+                    #   Далее - Sleeve.
+search_set = set(out_likage.loc[:, 'Sleeve_No'].astype(str))
+mask = sleeve.iloc[:, 0].astype(str).apply(
+    lambda x: any(term in x for term in search_set)
+)
+result_K2 = sleeve[mask]
+result_K2 = result_K2.drop(columns=['No'])  # Удаляем лишние столбцы.
+
+                    #   Наконец - Roller.
+search_set = set(out_likage.loc[:, 'Roller_No'].astype(str))
+mask = roller.iloc[:, 0].astype(str).apply(
+    lambda x: any(term in x for term in search_set)
+)
+result_K3 = roller[mask]
+result_K3 = result_K3.drop(columns=['No'])  # Удаляем лишние столбцы.
+
+result_K = pd.concat([result_K1, result_K2, result_K3], axis=1, ignore_index=True)
+print(result_K)
