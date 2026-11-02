@@ -21,9 +21,9 @@ def selection(frame_in, K):
 
 
 #   Получение данных из файлов
-roller=pd.read_csv('C:/TMP/Подбор/roller.csv', sep=';', encoding='utf-8', header=0, index_col=False)
-sleeve=pd.read_csv('C:/TMP/Подбор/sleeve.csv', sep=';', encoding='utf-8', header=0, index_col=False)
-ring=pd.read_csv('C:/TMP/Подбор/ring.csv', sep=';', encoding='utf-8', header=0, index_col=False)
+roller=pd.read_csv('roller.csv', sep=';', encoding='utf-8', header=0, index_col=False)
+sleeve=pd.read_csv('sleeve.csv', sep=';', encoding='utf-8', header=0, index_col=False)
+ring=pd.read_csv('ring.csv', sep=';', encoding='utf-8', header=0, index_col=False)
 
 #   Формирование входных данных в виде датафреймов (УИН, размер, номер детали)
 
@@ -178,7 +178,7 @@ while flag and (n_builds == 0 or n_builds_counter < n_builds):
 name_builds = str(n_builds)
 if n_builds == 0:
     name_builds = 'All'
-name_outfile = 'C:/TMP/Подбор/out_likage_' + str(int(delta_min * 1000)) + \
+name_outfile = 'out_likage_' + str(int(delta_min * 1000)) + \
     '_' + str(int(delta_max * 1000)) + '_' + str(name_builds) + '.csv'
 #print(name_outfile)
 out_likage.to_csv(name_outfile, sep=';', encoding='utf-8', index=False)
