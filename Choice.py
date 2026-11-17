@@ -19,46 +19,54 @@ def selection(frame_in, K):
     result_s = frame_in[frame_in[K].isin(result_K)]
     return result_s
 
-
-#   Получение данных из файлов
-roller=pd.read_csv('C:/TMP/Подбор/roller.csv', sep=';', encoding='utf-8', header=0, index_col=False)
-sleeve=pd.read_csv('C:/TMP/Подбор/sleeve.csv', sep=';', encoding='utf-8', header=0, index_col=False)
-ring=pd.read_csv('C:/TMP/Подбор/ring.csv', sep=';', encoding='utf-8', header=0, index_col=False)
-
-#   Формирование входных данных в виде датафреймов (УИН, размер, номер детали)
-
-#   Переименовываем столбцы для корректной работы с датафреймом
+#       Получение данных из файлов (первая часть данных ввиде чисел)
+roller=pd.read_csv('roller.csv', sep=';', encoding='utf-8', header=0, index_col=False)
+sleeve=pd.read_csv('sleeve.csv', sep=';', encoding='utf-8', header=0, index_col=False)
+ring=pd.read_csv('ring.csv', sep=';', encoding='utf-8', header=0, index_col=False)
+#       Переименовываем столбцы для корректной работы с датафреймом
 roller.rename(columns={'УИН': 'ID', 'РезИзмерения': 'Size'}, inplace=True)
 sleeve.rename(columns={'УИН': 'ID', 'РезИзмерения': 'Size'}, inplace=True)
 ring.rename(columns={'УИН': 'ID', 'РезИзмерения': 'Size'}, inplace=True)
-
-#   Определяем уникальный номер детали (No) как остаток от деления УИН на 1 000 000 000
+#       Определяем короткий номер детали (No) yymmddnnn (9 знаков)
 roller['No'] = roller['ID'] % 1000000000
 sleeve['No'] = sleeve['ID'] % 1000000000
 ring['No'] = ring['ID'] % 1000000000
+#       Получение данных из файлов (вторая часть: УИН (ID) - текст, 15 знаков)
+roller['ID'] = pd.read_csv('roller.csv', 
+                            dtype={'УИН': str}, sep=';', encoding='utf-8', header=0, index_col=False)['УИН']
+sleeve['ID'] = pd.read_csv('sleeve.csv',
+                            dtype={'УИН': str}, sep=';', encoding='utf-8', header=0, index_col=False)['УИН']
+ring['ID'] = pd.read_csv('ring.csv',
+                          dtype={'УИН': str}, sep=';', encoding='utf-8', header=0, index_col=False)['УИН']
 
 #   Ввод критериев подбора и количества сборок (0 - для подбора всех вариантов сборок)
-#   1. Параметры зазора: delta_min, delta_max
+
+#       1. Параметры зазора: delta_min, delta_max
 delta_min = float(input('Введите минимальный зазор: '))
 delta_max = float(input('Введите максимальный зазор: '))
-#   2. Количество сборок (0 - для подбора всех вариантов сборок)
+#       2. Количество сборок (0 - для подбора всех вариантов сборок)
 n_builds = int(input('Введите количество сборок (0 - для подбора всех вариантов): '))
 
+#   Вывод заданных условий подбора сборок (для удобства)
 print('\n')
 print('Зазор: ', delta_min, ' - ', delta_max)
 if n_builds == 0:
     print('Количество запрашиваемых сборок: все варианты', '\n')
 else:
     print('Количество запрашиваемых сборок: ', n_builds, '\n')
+#   Подсчёт общего количества вариантов подбора деталей.
+total_combinations = len(ring) * len(sleeve) * len(roller)
+print('Общее количество вариантов подбора деталей: ', total_combinations, '\n')
 
 #   Создание  датафрейма сборок, удовлетворяющих критериям подбора
 #   Delta = ring_size - (sleeve_size + 2 * roller_size)
 
+#       Преобразуем значения в массивы numpy для ускорения вычислений
 roller_sizes = roller['Size'].to_numpy()
 sleeve_sizes = sleeve['Size'].to_numpy()
 ring_sizes = ring['Size'].to_numpy()
-
-result = []
+#       Собственно, сам перебор по всем вариантам подбора деталей (тройки Ring, Sleeve, Roller)
+result = []         #   Результирующий список numpy
 
 for ring_index, ring_size in enumerate(ring_sizes):
     for sleeve_index, sleeve_size in enumerate(sleeve_sizes):
@@ -74,18 +82,16 @@ for ring_index, ring_size in enumerate(ring_sizes):
                 'Roller_No': roller.loc[roller_index, 'No'],
  #               'Delta': delta[roller_index]  #   Лишний столбец, будет мешать при удалении строк, т.к. хочет учавствовать в сравнении.
             })
-
-#  Датафрейм сборки с найденными вариантами подбора
+#       Датафрейм сборки с найденными вариантами подбора
 likage = pd.DataFrame(result)
+
+#   Вывод информации о найденных вариантах подбора
 
 if len(likage) == 0:
     print('Нет вариантов подбора, удовлетворяющих критериям зазора.')
     sys.exit()
-#   Вывод информации о найденных вариантах подбора
 #print('\n')
 print('Количество найденных вариантов подбора:', len(likage))
-#   Сохранение результатов в CSV-файл  (для проверки корректности работы алгоритма)
-#likage.to_csv('C:/TMP/Подбор/likage.csv', sep=';', encoding='utf-8', index=False)
 
 #   Небольшой анализ (предварительный вывод)
 unic_sborka = likage[[ 'Ring_No','Sleeve_No','Roller_No' ]].nunique()
@@ -128,9 +134,8 @@ print('\n', 'K1 =', K1, 'K2 =', K2, 'K3 =', K3, '\n')
 flag = True                                 #   Флажек, для обработки при 0-длине фрейма
 n_builds_counter = 0                        #   Счетчик сборок
 in_likage = likage.copy()                   #   Входной датафрейм сборок
-out_likage = pd.DataFrame(columns=['Ring_No', 'Sleeve_No', 'Roller_No'])    #, 'Delta'])    #   Выходной датафрейм сборок-подборок
-
-#print('тест входного фрейма ', '\n', in_likage, '\n')
+out_likage = pd.DataFrame(columns=['Ring_No', 'Sleeve_No', 'Roller_No'])    #   Выходной датафрейм сборок-подборок
+                                                                            #   Пока - пустой.
 
 #   Цикл подбора. Создание выходного датафрейма сборок.
 #   
@@ -155,17 +160,10 @@ while flag and (n_builds == 0 or n_builds_counter < n_builds):
         #   из всех найденных вариантов подбора К3.
 
     result_out = result_s3.sort_values(by=K3, ascending=True)
-#    result_out = result_out.drop(columns=['Delta'])
     out_likage = pd.concat([out_likage, result_out.iloc[[0]]], ignore_index=True)
 
         #   Удаление выбранной сборки из входного датафрейма сборок.
 
-#   Перый вариант удаления строк из likage 
-#   (удаляет только одну строку с найденой сборкой)
-#    likage_temp = in_likage[~(in_likage.eq(out_likage.iloc[-1])).any(axis=1)]
-#    in_likage = likage_temp.copy()      #   Обновление входного датафрейма сборок
-
-#   Второй вариант удаления строк из likage
     selected = out_likage.iloc[-1]
     in_likage = in_likage.loc[~in_likage.eq(selected, axis="columns").any(axis=1)]
 
@@ -173,21 +171,88 @@ while flag and (n_builds == 0 or n_builds_counter < n_builds):
         
 #   Конец цикла подбора.
 
+#   Преобразование датафрейма сборок с короткими номерами деталей в строковые значения,
+#   т.к. далее арифметика номеров будет мешать.
+out_likage = out_likage.astype(str)
+
+print('Выбранные сборки: ', '\n', out_likage, '\n')
+print('Количество сборок: ', len(out_likage))
+
+#       Выбор (поиск) УИН (ID) найденных деталей в исходном файле Колец.
+
+ring_id = ring["ID"].astype("string")
+parts = []
+
+for ring_no in out_likage["Ring_No"].dropna().astype(str):
+    if ring_no:  # пустая строка совпала бы с любым ID
+        mask = ring_id.str.contains(ring_no, regex=False, na=False)
+        parts.append(ring.loc[mask])
+
+ring_filtered = (
+    pd.concat(parts, ignore_index=True)
+    if parts
+    else ring.iloc[0:0].copy()
+)
+ring_filtered = ring_filtered.drop(columns=["No"])
+
+#       Выбор (поиск) УИН (ID) найденных деталей в исходном файле Втулок (внутренних колец).
+#
+#   Из-за нарушения технологии маркировки, а именно - отсутствия сквозной маркировки
+#   для двух разных видов внутренних колец, короткие номера, полученные из исходного
+#   файла могут быть не уникальными. Это не приводит к краху работы программы, но
+#   нарушает принцип "дефицитности" подбора деталей. Подбор дубликатов может быть не точным.
+
+sleeve_id = sleeve["ID"].astype("string")
+parts = []
+
+for sleeve_no in out_likage["Sleeve_No"].dropna().astype(str):
+    if sleeve_no:  # пустая строка совпала бы с любым ID
+        mask = sleeve_id.str.contains(sleeve_no, regex=False, na=False)
+        mask1 = mask & ~(mask & (mask.cumsum() > 1)) #   Добавка для удаления дубликатов в маске
+        if mask1.sum() < mask.sum():
+            print('Внимание! В исходном файле обнаружены дубликаты коротких номеров деталей:')
+            print(sleeve.loc[mask].copy())
+            print('Подбор по критериям может быть не точным.', '\n')
+        parts.append(sleeve.loc[mask1].copy())
+
+sleeve_filtered = (
+    pd.concat(parts, ignore_index=True)
+    if parts
+    else sleeve.iloc[0:0].copy()
+)
+sleeve_filtered = sleeve_filtered.drop(columns=["No"])
+
+#       Выбор (поиск) УИН (ID) найденных деталей в исходном файле Роликов.
+
+roller_id = roller["ID"].astype("string")
+parts = []
+
+for roller_no in out_likage["Roller_No"].dropna().astype(str):
+    if roller_no:  # пустая строка совпала бы с любым ID
+        mask = roller_id.str.contains(roller_no, regex=False, na=False)
+        parts.append(roller.loc[mask])
+
+roller_filtered = (
+    pd.concat(parts, ignore_index=True)
+    if parts
+    else roller.iloc[0:0].copy()
+)
+roller_filtered = roller_filtered.drop(columns=["No"])
+
+#   ???     Вывод информации о сборках в начальном формате (15 знаков)
+#   ???     и информации о зазорах (если необходимо)
+
+result_K = pd.concat([ring_filtered, sleeve_filtered, roller_filtered], axis=1, )     # ignore_index=True
 
 #   Вывод информации о выбранной сборке.
 name_builds = str(n_builds)
 if n_builds == 0:
     name_builds = 'All'
-name_outfile = 'C:/TMP/Подбор/out_likage_' + str(int(delta_min * 1000)) + \
+name_outfile = 'out_likage_' + str(int(delta_min * 1000)) + \
     '_' + str(int(delta_max * 1000)) + '_' + str(name_builds) + '.csv'
-#print(name_outfile)
-out_likage.to_csv(name_outfile, sep=';', encoding='utf-8', index=False)
-#out_likage.to_csv('C:/TMP/Подбор/out_likage.csv', sep=';', encoding='utf-8', index=False)
-print('Выбранные сборки: ', '\n', out_likage, '\n')
-print('Количество сборок: ', len(out_likage))
+
 print('Результат подбора сохранен в файле: ', name_outfile, '\n')
 
-#   ???     Вывод информации о сборках в начальном формате (13 знаков)
-#   ???     и информации о зазорах (если необходимо)
-
-
+result_K.to_csv(name_outfile, sep=';', encoding='utf-8', index=False)
+#result_K.to_excel('out_file.xlsx', index=False, )
+print(result_K)
