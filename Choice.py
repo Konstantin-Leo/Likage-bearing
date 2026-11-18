@@ -1,6 +1,7 @@
 import pandas as pd                 # Импорт необходимых библиотек
 import numpy as np
 import sys                          #   Для корректного выхода из программы
+import datetime                     # Для вычисления продолжительности работы программы
 
 #   Подпрограмма отбора уникальных значений по критерию К.
 
@@ -24,9 +25,9 @@ roller=pd.read_csv('roller.csv', sep=';', encoding='utf-8', header=0, index_col=
 sleeve=pd.read_csv('sleeve.csv', sep=';', encoding='utf-8', header=0, index_col=False)
 ring=pd.read_csv('ring.csv', sep=';', encoding='utf-8', header=0, index_col=False)
 #       Переименовываем столбцы для корректной работы с датафреймом
-roller.rename(columns={'УИН': 'ID', 'РезИзмерения': 'Size'}, inplace=True)
-sleeve.rename(columns={'УИН': 'ID', 'РезИзмерения': 'Size'}, inplace=True)
-ring.rename(columns={'УИН': 'ID', 'РезИзмерения': 'Size'}, inplace=True)
+roller = roller.rename(columns={'УИН': 'ID', 'РезИзмерения': 'Size'})   #, inplace=True)
+sleeve = sleeve.rename(columns={'УИН': 'ID', 'РезИзмерения': 'Size'})   #, inplace=True)
+ring = ring.rename(columns={'УИН': 'ID', 'РезИзмерения': 'Size'})       #, inplace=True)
 #       Определяем короткий номер детали (No) yymmddnnn (9 знаков)
 roller['No'] = roller['ID'] % 1000000000
 sleeve['No'] = sleeve['ID'] % 1000000000
@@ -47,8 +48,10 @@ delta_max = float(input('Введите максимальный зазор: '))
 #       2. Количество сборок (0 - для подбора всех вариантов сборок)
 n_builds = int(input('Введите количество сборок (0 - для подбора всех вариантов): '))
 
+x1 = datetime.datetime.now()
+
 #   Вывод заданных условий подбора сборок (для удобства)
-print('\n')
+print('\n', '\n')
 print('Зазор: ', delta_min, ' - ', delta_max)
 if n_builds == 0:
     print('Количество запрашиваемых сборок: все варианты', '\n')
@@ -210,7 +213,8 @@ for sleeve_no in out_likage["Sleeve_No"].dropna().astype(str):
         mask = sleeve_id.str.contains(sleeve_no, regex=False, na=False)
         mask1 = mask & ~(mask & (mask.cumsum() > 1)) #   Добавка для удаления дубликатов в маске
         if mask1.sum() < mask.sum():
-            print('Внимание! В исходном файле обнаружены дубликаты коротких номеров деталей:')
+            print('Внимание! В исходном файле обнаружены дубликаты' \
+            ' короткого номера внутренних колец:')
             print(sleeve.loc[mask].copy())
             print('Подбор по критериям может быть не точным.', '\n')
         parts.append(sleeve.loc[mask1].copy())
@@ -251,8 +255,11 @@ if n_builds == 0:
 name_outfile = 'out_likage_' + str(int(delta_min * 1000)) + \
     '_' + str(int(delta_max * 1000)) + '_' + str(name_builds) + '.csv'
 
-print('Результат подбора сохранен в файле: ', name_outfile, '\n')
-
 result_K.to_csv(name_outfile, sep=';', encoding='utf-8', index=False)
-#result_K.to_excel('out_file.xlsx', index=False, )
-print(result_K)
+print('Результат подбора сохранен в файле: ', name_outfile, '\n')
+#result_K.to_excel('out_file.xlsx', index=False, )          # Такое себе, для анализа
+print(result_K, '\n')
+x2 = datetime.datetime.now()
+x_delta = x2 - x1
+print('Время поиска комбинаций ',
+      'без учёта чтения исходников и ввода условий: ', x_delta)
